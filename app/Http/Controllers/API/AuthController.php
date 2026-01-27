@@ -7,34 +7,29 @@ use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use App\Http\Requests\LoginUserRequest;
 use Illuminate\Support\Facades\Validator;
+use App\Http\Requests\RegisterUserRequest;
 
 class AuthController extends Controller
 {
     // Register Method
-    public function register(Request $request)
+    public function register(RegisterUserRequest $request)
     {
-        $validator = Validator::make($request->all(), [
-            'name' => 'required|string|max:255',
-            'email' => 'required|string|email|max:255|unique:users',
-            'password' => 'required|string|min:8|confirmed',
-            'phone' => 'nullable|string|max:20'
-        ]);
 
-        if ($validator->fails())
-        {
-            return response()->json([
-                'Errors' => $validator->errors()
-            ], 422);
-        }
+        $validated = $request->validated();
 
         // Create New User
 
         $user = User::create([
-            'name' => $request->name,
-            'email' => $request->email,
-            'password' => Hash::make($request->password),
-            'phone' => $request->phone,
+            'name' => $validated['name'],
+            'email' => $validated['email'],
+            'password' => Hash::make($validated['password']),
+            'phone' => $validated['phone'] ?? null,
+            'address' => $validated['address'] ?? null,
+            'city' => $validated['city'] ?? null,
+            'country' => $validated['country'] ?? null,
+            'postal_code' => $validated['postal_code'] ?? null,
             'role' => 'customer'
 
         ]);
@@ -51,21 +46,12 @@ class AuthController extends Controller
     }
 
     // Login User 
-    public function login(Request $request)
+    public function login(LoginUserRequest $request)
     {
-        $validator = Validator::make($request->all(), [
-            'email' => 'required|email',
-            'password' => 'required'
-        ]);
 
-        if ($validator->fails())
-        {
-            return response()->json([
-                'errors' => $validator->errors()
-            ], 422);
-        }
+        $validated = $request->validated();
 
-        if (!Auth::attempt($request->only('email', 'password')))
+        if (!Auth::attempt($validated))
         {
             return response()->json([
                 'message' => 'Invalid Credintials (AuthController Line 71)'
@@ -73,9 +59,12 @@ class AuthController extends Controller
         }
 
         // Get The User Token 
-        $user = User::where('email', $request->email)->firstOrFail();
+        $user = User::where('email', $request['email'])->firstOrFail();
         $token = $user->createToken('auth-token')->plainTextToken;
-
+        
+        if ($validated['remember'] ?? false) {
+            $token = $user->createToken('auth_token', ['remember'])->plainTextToken;
+        }
         return response()->json([
             'message' => 'Logged In Successfully',
             'user' => $user,

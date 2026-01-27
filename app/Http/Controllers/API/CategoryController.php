@@ -8,6 +8,7 @@ use App\Models\Category;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Validator;
+use App\Http\Requests\StoreCategoryRequest;
 
 class CategoryController extends Controller
 {
@@ -18,16 +19,13 @@ class CategoryController extends Controller
     {
         $categories = Category::with(['parent', 'children'])->where('status', true)->get();
 
-        return response()->json([
-            'success' => true,
-            'data' => $categories
-        ]);
+        return $this->success($categories, $message = 'Category Fetched Correctly!');
     }
 
     /**
      * Store a newly created resource in storage.
      */
-    public function store(Request $request)
+    public function store(StoreCategoryRequest $request)
     {
         if (!$request->user()->isAdmin())
         {
@@ -36,32 +34,18 @@ class CategoryController extends Controller
             ], 403);
         }
 
-        $validator = Validator::make($request->all(), [
-            'name' => 'required|string|max:255',
-            'description' => 'nullable|string',
-            'parent_id' => 'nullable|exists:categories,id',
-            'status' => 'boolean'
-        ]);
+        $validated = $request->validated();
+        $validated['slug'] = Str::slug($validated['name']);
 
-        if ($validator->fails())
+        if ($request->hasFile('image'))
         {
-            return response()->json([
-                'errors' => $validator->errors()
-            ], 422);
+            $imagePath = $request->file('image')->store('categories', 'public');
+            $validated['image'] = $imagePath;
         }
 
-        $category = Category::create([
-            'name' => $request->name,
-            'slug' => Str::slug($request->name),
-            'description' => $request->description,
-            'parent_id' => $request->parent_id,
-            'status' => $request->status ?? true,
-        ]);
+        $category = Category::create($validated);
 
-        return response()->json([
-            'success' => true,
-            'data' => $category
-        ]);
+        return $this->created($category, 'Category Created Successfully!');
     }
 
     /**
@@ -69,10 +53,7 @@ class CategoryController extends Controller
      */
     public function show(Category $category)
     {
-        return response()->json([
-            'success' => true,
-            'data' => $category->load('parent', 'children', 'products')
-        ]);
+        return $this->success($category->load('parent', 'children', 'products'));
     }
 
     /**
@@ -90,23 +71,21 @@ class CategoryController extends Controller
     {
         if (!$request->user()->isAdmin())
         {
-            return response()->json([
-                'message' => 'Un Authorized, Admin Access Required!'
-            ], 403);
+            return $this->forbidden();
         }
 
         if ($category->products()->count() > 0)
         {
-            return response()->json([
-                'message' => 'Can not Delete Category, Please Delete Products First'
-            ], 400);
+            return $this->error('Can not Delete Category With Products', 400);
+        }
+
+        if ($category->image) {
+            \Storage::disk('public')->delete($category->image);
         }
 
         $category->delete();
 
-        return response()->json([
-            'message' => 'Category Deleted Successfully!'
-        ]);
+        return $this->deleted('Category Deleted Successfully!');
     }
 
     /**
@@ -116,10 +95,9 @@ class CategoryController extends Controller
     {
         $categories = Category::where('parent_id', $parentId)->where('status', true)->with('children')->get();
 
-        return response()->json([
-            'success' => true,
+        return $this->success([
             'parent_id' => $parentId,
-            'data' => $categories
+            'categories' => $categories
         ]);
     }
 

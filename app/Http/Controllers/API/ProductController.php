@@ -8,6 +8,7 @@ use App\Models\Category;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Validator;
+use App\Http\Requests\StoreProductRequest;
 
 class ProductController extends Controller
 {
@@ -27,8 +28,10 @@ class ProductController extends Controller
     /**
      * Store a newly created resource in storage.
      */
-    public function store(Request $request)
+    public function store(StoreProductRequest $request)
     {
+
+
         if (!$request->user()->isAdmin())
         {
             return response() ->json([
@@ -36,37 +39,28 @@ class ProductController extends Controller
             ], 403);
         }
 
-        $validtor = Validator::make($request->all(), [
-            'name' => 'required|string|max:255',
-            'description' => 'nullable|string',
-            'price' => 'required|numeric|min:0',
-            'compare_price' => 'nullable|numeric|min:0',
-            'quantity' => 'required|integer|min:0',
-            'sku' => 'nullable|string|unique:products,sku',
-            'category_id' => 'required|exists:categories,id',
-            'featured' => 'boolean',
-            'status' => 'boolean'
-        ]);
+        $validated = $request->validated();
+        $validated['slug'] = Str::slug($validated['name']);
 
-        if ($validtor->fails())
+        if ($request->hasFile('image'))
         {
-            return response()->json([
-                'errors' => $validtor->errors()
-            ], 422);
+            $imagePath = $request->file('image')->store('products', 'public');
+            $validated['image'] = $imagePath;
         }
 
-        $product = Product::create([
-            'name' => $request->name,
-            'slug' => Str::slug($request->name),
-            'description' => $request->description,
-            'price' => $request->price,
-            'compare_price' => $request->compare_price,
-            'quantity' => $request->quantity,
-            'sku' => $request->sku,
-            'category_id' => $request->category_id,
-            'featured' => $request->featured ?? false,
-            'status' => $request->status ?? true
-        ]);
+        if ($request->hasFile('images'))
+        {
+            $imagesPaths = [];
+
+            foreach($request->file('images') as $image)
+            {
+                $imagesPaths[] = $image->store('products/gallery', 'public');
+            }
+
+            $validated['images'] = json_encode($imagesPaths);
+        }
+
+        $product = Product::create($validated);
 
         return response()->json([
             'message' => 'Product Created Successfully!',
