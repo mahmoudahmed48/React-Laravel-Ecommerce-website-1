@@ -23,16 +23,16 @@ Route::prefix('users')->group(function () {
     Route::put('/profile', [UserController::class, 'updateProfile'])->middleware('auth:sanctum');
 });
 
-// Products Routes 
+// Products Routes - Public 
 Route::get('/products', [ProductController::class, 'index']);
 Route::get('/products/{product}', [ProductController::class, 'show']);
 Route::get('/products/category/{category}', [ProductController::class, 'byCategory']);
 Route::get('/products/search/{keyword}', [ProductController::class, 'search']);
 
-Route::middleware(['auth:sanctum'])->group(function () {
-    Route::post('/products', [ProductController::class, 'store']);
-    Route::put('/products/{product}', [ProductController::class, 'update']);
-    Route::delete('/products/{product}', [ProductController::class, 'destroy']);
+Route::middleware(['auth:sanctum','permission:manage-products'])->group(function () {
+    Route::post('/products', [ProductController::class, 'store'])->middleware('can:create,App\Models\Product');
+    Route::put('/products/{product}', [ProductController::class, 'update'])->middleware('can:update,product');
+    Route::delete('/products/{product}', [ProductController::class, 'destroy'])->middleware('can:delete,product');
 });
 
 
@@ -43,10 +43,10 @@ Route::get('/categories/{category}', [CategoryController::class, 'show']);
 Route::get('/categories/search/{keyword}', [CategoryController::class, 'search']);
 Route::get('/categories/parent/{parent}', [CategoryController::class, 'byParent']);
 
-Route::middleware(['auth:sanctum'])->group(function () {
-    Route::post('/categories', [CategoryController::class, 'store']);
-    Route::put('/categories/{category}', [CategoryController::class, 'update']);
-    Route::delete('/categories/{category}', [CategoryController::class, 'destroy']);
+Route::middleware(['auth:sanctum', 'permission:manage-categories'])->group(function () {
+    Route::post('/categories', [CategoryController::class, 'store'])->middleware('can:create,App\Models\Category');
+    Route::put('/categories/{category}', [CategoryController::class, 'update'])->middleware('can:update,category');
+    Route::delete('/categories/{category}', [CategoryController::class, 'destroy'])->middleware('can:delete,category');
 });
 
 // Orders Routes 

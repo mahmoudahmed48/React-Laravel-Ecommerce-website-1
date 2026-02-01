@@ -7,6 +7,7 @@ use App\Models\Product;
 use App\Models\Category;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Validator;
 use App\Http\Requests\StoreProductRequest;
 
@@ -32,11 +33,9 @@ class ProductController extends Controller
     {
 
 
-        if (!$request->user()->isAdmin())
+        if (Gate::denies('create', Product::class))
         {
-            return response() ->json([
-                'message' => 'UnAuthorized - Admin Only'
-            ], 403);
+            return $this->forbidden('You Are Not Authorized To Create Products');
         }
 
         $validated = $request->validated();
@@ -92,11 +91,9 @@ class ProductController extends Controller
      */
     public function destroy(Request $request, Product $product)
     {
-        if (!$request->user()->isAdmin())
+        if (Gate::denies('create', Product::class))
         {
-            return response()->json([
-                'message' => 'UnAuthorized  - Admin Only'
-            ], 403);
+            return $this->forbidden('You Are Not Authorized To Create Products');
         }
 
         $product->delete();
