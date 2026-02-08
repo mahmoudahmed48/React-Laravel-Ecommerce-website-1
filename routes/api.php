@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\API\AuthController;
+use App\Http\Controllers\API\CartController;
 use App\Http\Controllers\API\UserController;
 use App\Http\Controllers\API\OrderController;
 use App\Http\Controllers\API\ProductController;
@@ -28,7 +29,7 @@ Route::get('/products', [ProductController::class, 'index']);
 Route::get('/products/{product}', [ProductController::class, 'show']);
 Route::get('/products/category/{category}', [ProductController::class, 'byCategory']);
 Route::get('/products/search/{keyword}', [ProductController::class, 'search']);
-
+// Products Routes - Admin
 Route::middleware(['auth:sanctum','permission:manage-products'])->group(function () {
     Route::post('/products', [ProductController::class, 'store'])->middleware('can:create,App\Models\Product');
     Route::put('/products/{product}', [ProductController::class, 'update'])->middleware('can:update,product');
@@ -37,7 +38,6 @@ Route::middleware(['auth:sanctum','permission:manage-products'])->group(function
 
 
 // Categories Routes 
-
 Route::get('/categories', [CategoryController::class, 'index']);
 Route::get('/categories/{category}', [CategoryController::class, 'show']);
 Route::get('/categories/search/{keyword}', [CategoryController::class, 'search']);
@@ -61,6 +61,23 @@ Route::prefix('dashboard')->middleware(['auth:sanctum' , 'admin'])->group(functi
     Route::get('/top-products', [DashboardController::class, 'topProducts']);
 
 });
+
+// Cart Routes 
+Route::get('/', [CartController::class, 'index']);
+Route::get('/count', [CartController::class, 'getCount']);
+Route::post('/add', [CartController::class, 'addItem']);
+Route::put('/update/{productId}', [CartController::class, 'updateQuantity']);
+Route::delete('/remove/{productId}', [CartController::class, 'removeItem']);
+Route::delete('/clear', [CartController::class, 'clear']);
+Route::post('/coupon/apply', [CartController::class, 'applyCoupon']);
+Route::delete('/coupon/remove', [CartController::class, 'removeCoupon']);
+Route::get('/checkout-preview', [CartController::class, 'checkoutPreview']);
+
+Route::middleware(['auth:sanctum'])->group(function () {
+    Route::post('cart/save', [CartController::class, 'saveCart']);
+    Route::get('cart/history', [CartController::class, 'getCartHistory']);
+});
+
 
 // Public Routes 
 
